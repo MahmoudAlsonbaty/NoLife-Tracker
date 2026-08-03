@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "nolifetracker",
+  "version": "${version}",
+  "name": "NoLife Tracker",
+  "description": "A server-side mob hunting challenge: kill one of every mob in the game. Tracks per-player progress, shows it in the tab list, and provides leaderboards and per-dimension checklists.",
+  "authors": [
+    "xSaitama1"
+  ],
+  "contact": {
+    "sources": "https://github.com/MahmoudAlsonbaty/NoLifeTracker",
+    "issues": "https://github.com/MahmoudAlsonbaty/NoLifeTracker/issues"
+  },
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "org.xsaitama1.nolifetracker.NoLifeTracker"
+    ]
+  },
+  "mixins": [
+    "nolifetracker.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
