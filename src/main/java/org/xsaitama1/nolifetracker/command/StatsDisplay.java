@@ -1,15 +1,15 @@
 package org.xsaitama1.nolifetracker.command;
 
 import com.mojang.brigadier.context.CommandContext;
-import net.minecraft.registry.Registries;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.stat.Stats;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
+import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.stats.Stats;
+import net.minecraft.world.entity.EntityType;
 import org.xsaitama1.nolifetracker.NoLifeTrackerService;
 import org.xsaitama1.nolifetracker.challenge.ChallengeRegistry;
 import org.xsaitama1.nolifetracker.challenge.DimensionResolver;
@@ -32,20 +32,20 @@ public final class StatsDisplay {
 
     /** The groups {@code /nolifetracker missing} splits mobs into, in display order. */
     private static final List<Group> GROUPS = List.of(
-            new Group("Overworld", DimensionResolver.OVERWORLD, Formatting.GREEN),
-            new Group("Nether", DimensionResolver.NETHER, Formatting.DARK_RED),
-            new Group("End", DimensionResolver.END, Formatting.LIGHT_PURPLE),
+            new Group("Overworld", DimensionResolver.OVERWORLD, ChatFormatting.GREEN),
+            new Group("Nether", DimensionResolver.NETHER, ChatFormatting.DARK_RED),
+            new Group("End", DimensionResolver.END, ChatFormatting.LIGHT_PURPLE),
             // Mobs with no resolvable dimension used to be dropped from the challenge entirely.
             // They now count, and land here.
-            new Group("Other", null, Formatting.AQUA)
+            new Group("Other", null, ChatFormatting.AQUA)
     );
 
     private StatsDisplay() {
     }
 
-    public static int showHelp(CommandContext<ServerCommandSource> context) {
-        ServerCommandSource source = context.getSource();
-        source.sendMessage(Text.literal("--- NoLife Tracker ---").formatted(Formatting.GOLD, Formatting.BOLD));
+    public static int showHelp(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        source.sendSystemMessage(Component.literal("--- NoLife Tracker ---").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
 
         help(source, "/nolifetracker <player>", "Summary of a player's progress");
         help(source, "/nolifetracker missing", "Which mobs you still need");
@@ -60,8 +60,8 @@ public final class StatsDisplay {
         return 1;
     }
 
-    public static int showSummary(CommandContext<ServerCommandSource> context, String playerName) {
-        ServerCommandSource source = context.getSource();
+    public static int showSummary(CommandContext<CommandSourceStack> context, String playerName) {
+        CommandSourceStack source = context.getSource();
         StatsRepository repository = repository(source);
         if (repository == null) {
             return 0;
@@ -73,37 +73,37 @@ public final class StatsDisplay {
             return notFound(source, playerName);
         }
 
-        source.sendMessage(Text.literal("--- " + stats.lastKnownName + " ---")
-                .formatted(Formatting.GOLD, Formatting.BOLD));
+        source.sendSystemMessage(Component.literal("--- " + stats.lastKnownName + " ---")
+                .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
 
         int unique = ChallengeRegistry.uniqueKills(uuid, stats);
-        line(source, "Challenge", unique + " / " + ChallengeRegistry.total() + " mobs", Formatting.GREEN);
-        line(source, "Mob kills", String.valueOf(stats.totalMobKills), Formatting.AQUA);
-        line(source, "Player kills", String.valueOf(stats.totalPlayerKills), Formatting.RED);
-        line(source, "Deaths", String.valueOf(stats.totalDeaths), Formatting.GRAY);
+        line(source, "Challenge", unique + " / " + ChallengeRegistry.total() + " mobs", ChatFormatting.GREEN);
+        line(source, "Mob kills", String.valueOf(stats.totalMobKills), ChatFormatting.AQUA);
+        line(source, "Player kills", String.valueOf(stats.totalPlayerKills), ChatFormatting.RED);
+        line(source, "Deaths", String.valueOf(stats.totalDeaths), ChatFormatting.GRAY);
 
         // Play time comes from vanilla's own statistics, which are only loaded for online players.
-        ServerPlayerEntity online = source.getServer().getPlayerManager().getPlayer(uuid);
+        ServerPlayer online = source.getServer().getPlayerList().getPlayer(uuid);
         if (online != null) {
-            int ticks = online.getStatHandler().getStat(Stats.CUSTOM, Stats.PLAY_TIME);
-            line(source, "Play time", TextUtil.formatPlayTime(ticks), Formatting.YELLOW);
+            int ticks = online.getStats().getValue(Stats.CUSTOM, Stats.PLAY_TIME);
+            line(source, "Play time", TextUtil.formatPlayTime(ticks), ChatFormatting.YELLOW);
         }
 
         return 1;
     }
 
-    public static int showProgressLeaderboard(CommandContext<ServerCommandSource> context) {
-        ServerCommandSource source = context.getSource();
+    public static int showProgressLeaderboard(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
         StatsRepository repository = repository(source);
         if (repository == null) {
             return 0;
         }
 
-        source.sendMessage(Text.literal("--- Top Mob Hunters ---").formatted(Formatting.GOLD, Formatting.BOLD));
+        source.sendSystemMessage(Component.literal("--- Top Mob Hunters ---").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
 
         List<Ranked> ranked = rankByProgress(repository);
         if (ranked.isEmpty()) {
-            source.sendMessage(Text.literal("Nobody has killed anything yet.").formatted(Formatting.GRAY));
+            source.sendSystemMessage(Component.literal("Nobody has killed anything yet.").withStyle(ChatFormatting.GRAY));
             return 1;
         }
 
@@ -113,21 +113,21 @@ public final class StatsDisplay {
             if (rank > ConfigManager.get().leaderboardSize) {
                 break;
             }
-            source.sendMessage(Text.literal(rank + ". " + entry.stats.lastKnownName
-                    + " - " + entry.score + "/" + total + " mobs").formatted(Formatting.GREEN));
+            source.sendSystemMessage(Component.literal(rank + ". " + entry.stats.lastKnownName
+                    + " - " + entry.score + "/" + total + " mobs").withStyle(ChatFormatting.GREEN));
             rank++;
         }
         return 1;
     }
 
-    public static int showDeathLeaderboard(CommandContext<ServerCommandSource> context) {
-        ServerCommandSource source = context.getSource();
+    public static int showDeathLeaderboard(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
         StatsRepository repository = repository(source);
         if (repository == null) {
             return 0;
         }
 
-        source.sendMessage(Text.literal("--- Most Deaths ---").formatted(Formatting.GOLD, Formatting.BOLD));
+        source.sendSystemMessage(Component.literal("--- Most Deaths ---").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
 
         List<PlayerStats> sorted = new ArrayList<>(repository.all().values());
         sorted.sort(Comparator.comparingInt((PlayerStats stats) -> stats.totalDeaths).reversed());
@@ -137,30 +137,30 @@ public final class StatsDisplay {
             if (rank > ConfigManager.get().leaderboardSize) {
                 break;
             }
-            source.sendMessage(Text.literal(rank + ". " + stats.lastKnownName + " - " + stats.totalDeaths + " deaths")
-                    .formatted(Formatting.RED));
+            source.sendSystemMessage(Component.literal(rank + ". " + stats.lastKnownName + " - " + stats.totalDeaths + " deaths")
+                    .withStyle(ChatFormatting.RED));
             rank++;
         }
         return 1;
     }
 
-    public static int showPlayerDeaths(CommandContext<ServerCommandSource> context, String playerName) {
-        return showTally(context, playerName, "Deaths", Formatting.GRAY,
+    public static int showPlayerDeaths(CommandContext<CommandSourceStack> context, String playerName) {
+        return showTally(context, playerName, "Deaths", ChatFormatting.GRAY,
                 stats -> stats.deathReasons, "This player hasn't died yet.", false);
     }
 
-    public static int showPlayerPvpKills(CommandContext<ServerCommandSource> context, String playerName) {
-        return showTally(context, playerName, "PvP Kills", Formatting.AQUA,
+    public static int showPlayerPvpKills(CommandContext<CommandSourceStack> context, String playerName) {
+        return showTally(context, playerName, "PvP Kills", ChatFormatting.AQUA,
                 stats -> stats.killedPlayers, "This player hasn't killed anyone yet.", false);
     }
 
-    public static int showPlayerMobs(CommandContext<ServerCommandSource> context, String playerName) {
-        return showTally(context, playerName, "Mob Kills", Formatting.AQUA,
+    public static int showPlayerMobs(CommandContext<CommandSourceStack> context, String playerName) {
+        return showTally(context, playerName, "Mob Kills", ChatFormatting.AQUA,
                 stats -> stats.killedMobs, "This player hasn't killed any mobs yet.", true);
     }
 
-    public static int showMissing(CommandContext<ServerCommandSource> context, String playerName) {
-        ServerCommandSource source = context.getSource();
+    public static int showMissing(CommandContext<CommandSourceStack> context, String playerName) {
+        CommandSourceStack source = context.getSource();
         StatsRepository repository = repository(source);
         if (repository == null) {
             return 0;
@@ -175,12 +175,12 @@ public final class StatsDisplay {
         int unique = ChallengeRegistry.uniqueKills(uuid, stats);
         int total = ChallengeRegistry.total();
 
-        source.sendMessage(Text.literal("--- " + stats.lastKnownName + " [" + unique + "/" + total + "] ---")
-                .formatted(Formatting.GOLD, Formatting.BOLD));
+        source.sendSystemMessage(Component.literal("--- " + stats.lastKnownName + " [" + unique + "/" + total + "] ---")
+                .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
 
         if (unique >= total && total > 0) {
-            source.sendMessage(Text.literal("Every mob in the game has been defeated!")
-                    .formatted(Formatting.GOLD, Formatting.BOLD));
+            source.sendSystemMessage(Component.literal("Every mob in the game has been defeated!")
+                    .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
             return 1;
         }
 
@@ -194,14 +194,14 @@ public final class StatsDisplay {
             }
 
             if (!firstGroup) {
-                source.sendMessage(Text.literal(" "));
+                source.sendSystemMessage(Component.literal(" "));
             }
             firstGroup = false;
 
             int done = bucket.killed.size();
-            source.sendMessage(Text.literal(group.name + " [" + done + "/"
-                    + (done + bucket.remaining.size()) + "]").formatted(group.colour));
-            source.sendMessage(bucket.render(group.colour));
+            source.sendSystemMessage(Component.literal(group.name + " [" + done + "/"
+                    + (done + bucket.remaining.size()) + "]").withStyle(group.colour));
+            source.sendSystemMessage(bucket.render(group.colour));
         }
 
         return 1;
@@ -211,11 +211,11 @@ public final class StatsDisplay {
     // internals
     // ------------------------------------------------------------------
 
-    private static int showTally(CommandContext<ServerCommandSource> context, String playerName,
-                                 String heading, Formatting colour,
+    private static int showTally(CommandContext<CommandSourceStack> context, String playerName,
+                                 String heading, ChatFormatting colour,
                                  java.util.function.Function<PlayerStats, Map<String, Integer>> selector,
                                  String emptyMessage, boolean prettifyKeys) {
-        ServerCommandSource source = context.getSource();
+        CommandSourceStack source = context.getSource();
         StatsRepository repository = repository(source);
         if (repository == null) {
             return 0;
@@ -232,11 +232,11 @@ public final class StatsDisplay {
                 + "/" + ChallengeRegistry.total() + "]"
                 : "";
 
-        source.sendMessage(Text.literal("--- " + stats.lastKnownName + "'s " + heading + suffix + " ---")
-                .formatted(Formatting.GOLD));
+        source.sendSystemMessage(Component.literal("--- " + stats.lastKnownName + "'s " + heading + suffix + " ---")
+                .withStyle(ChatFormatting.GOLD));
 
         if (tally.isEmpty()) {
-            source.sendMessage(Text.literal(emptyMessage).formatted(Formatting.GRAY));
+            source.sendSystemMessage(Component.literal(emptyMessage).withStyle(ChatFormatting.GRAY));
             return 1;
         }
 
@@ -245,7 +245,7 @@ public final class StatsDisplay {
 
         for (Map.Entry<String, Integer> entry : sorted) {
             String label = prettifyKeys ? TextUtil.prettify(entry.getKey()) : entry.getKey();
-            source.sendMessage(Text.literal("- " + label + ": " + entry.getValue()).formatted(colour));
+            source.sendSystemMessage(Component.literal("- " + label + ": " + entry.getValue()).withStyle(colour));
         }
         return 1;
     }
@@ -270,7 +270,7 @@ public final class StatsDisplay {
             if (id == null) {
                 continue;
             }
-            Optional<EntityType<?>> type = Registries.ENTITY_TYPE.getOptionalValue(id);
+            Optional<EntityType<?>> type = BuiltInRegistries.ENTITY_TYPE.getOptional(id);
             if (type.isEmpty()) {
                 continue;
             }
@@ -307,31 +307,31 @@ public final class StatsDisplay {
         return ranked;
     }
 
-    static StatsRepository repository(ServerCommandSource source) {
+    static StatsRepository repository(CommandSourceStack source) {
         NoLifeTrackerService service = NoLifeTrackerService.get();
         if (service == null) {
-            source.sendError(Text.literal("NoLife Tracker is not ready yet."));
+            source.sendFailure(Component.literal("NoLife Tracker is not ready yet."));
             return null;
         }
         return service.stats();
     }
 
-    private static int notFound(ServerCommandSource source, String playerName) {
-        source.sendMessage(Text.literal("No stats recorded for '" + playerName + "'.").formatted(Formatting.RED));
+    private static int notFound(CommandSourceStack source, String playerName) {
+        source.sendSystemMessage(Component.literal("No stats recorded for '" + playerName + "'.").withStyle(ChatFormatting.RED));
         return 0;
     }
 
-    private static void help(ServerCommandSource source, String command, String description) {
-        source.sendMessage(Text.literal(command).formatted(Formatting.YELLOW)
-                .append(Text.literal(" - " + description).formatted(Formatting.GRAY)));
+    private static void help(CommandSourceStack source, String command, String description) {
+        source.sendSystemMessage(Component.literal(command).withStyle(ChatFormatting.YELLOW)
+                .append(Component.literal(" - " + description).withStyle(ChatFormatting.GRAY)));
     }
 
-    private static void line(ServerCommandSource source, String label, String value, Formatting colour) {
-        source.sendMessage(Text.literal(label + ": ").formatted(Formatting.GRAY)
-                .append(Text.literal(value).formatted(colour)));
+    private static void line(CommandSourceStack source, String label, String value, ChatFormatting colour) {
+        source.sendSystemMessage(Component.literal(label + ": ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(value).withStyle(colour)));
     }
 
-    private record Group(String name, Identifier dimension, Formatting colour) {
+    private record Group(String name, Identifier dimension, ChatFormatting colour) {
     }
 
     private record Ranked(PlayerStats stats, int score) {
@@ -353,26 +353,26 @@ public final class StatsDisplay {
             excluded.sort(String::compareToIgnoreCase);
         }
 
-        private MutableText render(Formatting remainingColour) {
-            MutableText line = Text.empty();
+        private MutableComponent render(ChatFormatting remainingColour) {
+            MutableComponent line = Component.empty();
             boolean first = true;
 
             first = append(line, remaining, first, remainingColour);
-            first = append(line, killed, first, Formatting.GRAY);
-            append(line, excluded, first, Formatting.GRAY, Formatting.STRIKETHROUGH);
+            first = append(line, killed, first, ChatFormatting.GRAY);
+            append(line, excluded, first, ChatFormatting.GRAY, ChatFormatting.STRIKETHROUGH);
 
             return line;
         }
 
         /** Returns whether the line is still empty, so separators are never emitted first. */
-        private static boolean append(MutableText line, List<String> values, boolean first, Formatting... formats) {
+        private static boolean append(MutableComponent line, List<String> values, boolean first, ChatFormatting... formats) {
             if (values.isEmpty()) {
                 return first;
             }
             if (!first) {
-                line.append(Text.literal(", ").formatted(Formatting.GRAY));
+                line.append(Component.literal(", ").withStyle(ChatFormatting.GRAY));
             }
-            line.append(Text.literal(String.join(", ", values)).formatted(formats));
+            line.append(Component.literal(String.join(", ", values)).withStyle(formats));
             return false;
         }
     }

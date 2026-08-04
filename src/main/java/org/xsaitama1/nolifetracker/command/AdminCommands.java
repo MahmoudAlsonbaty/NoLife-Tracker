@@ -6,14 +6,14 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
-import net.minecraft.command.CommandSource;
-import net.minecraft.command.argument.IdentifierArgumentType;
-import net.minecraft.registry.Registries;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
+import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.IdentifierArgument;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import org.xsaitama1.nolifetracker.NoLifeTrackerService;
 import org.xsaitama1.nolifetracker.challenge.ChallengeRegistry;
 import org.xsaitama1.nolifetracker.challenge.MobClassifier;
@@ -42,41 +42,41 @@ public final class AdminCommands {
 
     private static List<String> cachedEntityIds;
 
-    private static final SuggestionProvider<ServerCommandSource> ENTITY_SUGGESTER =
-            (context, builder) -> CommandSource.suggestMatching(entityIds(), builder);
+    private static final SuggestionProvider<CommandSourceStack> ENTITY_SUGGESTER =
+            (context, builder) -> SharedSuggestionProvider.suggest(entityIds(), builder);
 
-    private static final SuggestionProvider<ServerCommandSource> DIMENSION_SUGGESTER =
-            (context, builder) -> CommandSource.suggestMatching(
+    private static final SuggestionProvider<CommandSourceStack> DIMENSION_SUGGESTER =
+            (context, builder) -> SharedSuggestionProvider.suggest(
                     List.of("minecraft:overworld", "minecraft:the_nether", "minecraft:the_end"), builder);
 
     private AdminCommands() {
     }
 
-    public static LiteralArgumentBuilder<ServerCommandSource> exclude() {
-        return CommandManager.literal("exclude")
-                .requires(CommandManager.requirePermissionLevel(CommandManager.ADMINS_CHECK))
-                .then(CommandManager.argument("mob", IdentifierArgumentType.identifier())
+    public static LiteralArgumentBuilder<CommandSourceStack> exclude() {
+        return Commands.literal("exclude")
+                .requires(Commands.hasPermission(Commands.LEVEL_ADMINS))
+                .then(Commands.argument("mob", IdentifierArgument.id())
                         .suggests(ENTITY_SUGGESTER)
                         .executes(context -> {
-                            context.getSource().sendFeedback(() -> Text.literal(
+                            context.getSource().sendSuccess(() -> Component.literal(
                                     "Specify true to stop counting this mob, or false to count it again.")
-                                    .formatted(Formatting.RED), false);
+                                    .withStyle(ChatFormatting.RED), false);
                             return 0;
                         })
-                        .then(CommandManager.argument("excluded", BoolArgumentType.bool())
+                        .then(Commands.argument("excluded", BoolArgumentType.bool())
                                 .executes(AdminCommands::setExcluded)));
     }
 
-    public static LiteralArgumentBuilder<ServerCommandSource> editMob() {
-        return CommandManager.literal("editMob")
-                .requires(CommandManager.requirePermissionLevel(CommandManager.ADMINS_CHECK))
-                .then(CommandManager.argument("mob", IdentifierArgumentType.identifier())
+    public static LiteralArgumentBuilder<CommandSourceStack> editMob() {
+        return Commands.literal("editMob")
+                .requires(Commands.hasPermission(Commands.LEVEL_ADMINS))
+                .then(Commands.argument("mob", IdentifierArgument.id())
                         .suggests(ENTITY_SUGGESTER)
                         // Literal first: Brigadier prefers it over the identifier argument, which
                         // is what the old "Remove" suggestion was trying and failing to be.
-                        .then(CommandManager.literal("clear")
+                        .then(Commands.literal("clear")
                                 .executes(AdminCommands::clearDimension))
-                        .then(CommandManager.argument("dimension", IdentifierArgumentType.identifier())
+                        .then(Commands.argument("dimension", IdentifierArgument.id())
                                 .suggests(DIMENSION_SUGGESTER)
                                 .executes(AdminCommands::setDimension)));
     }
@@ -85,9 +85,9 @@ public final class AdminCommands {
      * Every setting in {@code config.json}, editable in-game. Each change is written straight
      * back to the file, so the two can never drift apart.
      */
-    public static LiteralArgumentBuilder<ServerCommandSource> config() {
-        return CommandManager.literal("config")
-                .requires(CommandManager.requirePermissionLevel(CommandManager.ADMINS_CHECK))
+    public static LiteralArgumentBuilder<CommandSourceStack> config() {
+        return Commands.literal("config")
+                .requires(Commands.hasPermission(Commands.LEVEL_ADMINS))
                 .executes(AdminCommands::showConfig)
 
                 .then(textSetting("tabHeader",
@@ -121,13 +121,13 @@ public final class AdminCommands {
                         (config, value) -> config.autoSaveMinutes = value));
     }
 
-    public static LiteralArgumentBuilder<ServerCommandSource> reload() {
-        return CommandManager.literal("reload")
-                .requires(CommandManager.requirePermissionLevel(CommandManager.ADMINS_CHECK))
+    public static LiteralArgumentBuilder<CommandSourceStack> reload() {
+        return Commands.literal("reload")
+                .requires(Commands.hasPermission(Commands.LEVEL_ADMINS))
                 .executes(context -> {
                     NoLifeTrackerService service = NoLifeTrackerService.get();
                     if (service == null) {
-                        context.getSource().sendError(Text.literal("NoLife Tracker is not ready yet."));
+                        context.getSource().sendFailure(Component.literal("NoLife Tracker is not ready yet."));
                         return 0;
                     }
 
@@ -143,39 +143,39 @@ public final class AdminCommands {
      * Reports anything that could make the challenge set wrong: mobs the classifier could
      * not place, and config entries naming entities that do not exist.
      */
-    public static LiteralArgumentBuilder<ServerCommandSource> audit() {
-        return CommandManager.literal("audit")
-                .requires(CommandManager.requirePermissionLevel(CommandManager.MODERATORS_CHECK))
+    public static LiteralArgumentBuilder<CommandSourceStack> audit() {
+        return Commands.literal("audit")
+                .requires(Commands.hasPermission(Commands.LEVEL_MODERATORS))
                 .executes(context -> {
-                    ServerCommandSource source = context.getSource();
-                    source.sendMessage(Text.literal("--- NoLife Tracker audit ---")
-                            .formatted(Formatting.GOLD, Formatting.BOLD));
+                    CommandSourceStack source = context.getSource();
+                    source.sendSystemMessage(Component.literal("--- NoLife Tracker audit ---")
+                            .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
 
-                    source.sendMessage(Text.literal("Tracked mobs: ").formatted(Formatting.GRAY)
-                            .append(Text.literal(String.valueOf(ChallengeRegistry.total()))
-                                    .formatted(Formatting.GREEN)));
+                    source.sendSystemMessage(Component.literal("Tracked mobs: ").withStyle(ChatFormatting.GRAY)
+                            .append(Component.literal(String.valueOf(ChallengeRegistry.total()))
+                                    .withStyle(ChatFormatting.GREEN)));
 
                     // Sorted here rather than trusted from all(), which hands back a Set.copyOf
                     // whose iteration order is deliberately unspecified.
                     List<String> excluded = new ArrayList<>(new TreeSet<>(ExcludedMobsConfig.all()));
                     if (excluded.isEmpty()) {
-                        source.sendMessage(Text.literal("Excluded: ").formatted(Formatting.GRAY)
-                                .append(Text.literal("none").formatted(Formatting.GREEN)));
+                        source.sendSystemMessage(Component.literal("Excluded: ").withStyle(ChatFormatting.GRAY)
+                                .append(Component.literal("none").withStyle(ChatFormatting.GREEN)));
                     } else {
                         reportList(source, "Excluded (not counted)",
-                                excluded, Formatting.YELLOW);
-                        source.sendMessage(Text.literal("(restore with /nolifetracker exclude <mob> false)").formatted(Formatting.YELLOW));
+                                excluded, ChatFormatting.YELLOW);
+                        source.sendSystemMessage(Component.literal("(restore with /nolifetracker exclude <mob> false)").withStyle(ChatFormatting.YELLOW));
                     }
 
                     Set<String> unclassified = MobClassifier.unclassifiedCandidates(
                             Set.copyOf(ConfigManager.get().forceIncludeMobs));
                     reportList(source, "Unclassified (add to forceIncludeMobs if any is a mob)",
-                            List.copyOf(unclassified), Formatting.YELLOW);
+                            List.copyOf(unclassified), ChatFormatting.YELLOW);
 
                     reportList(source, "Dimension overrides naming unknown entities",
-                            DimensionOverridesConfig.unknownEntityIds(), Formatting.RED);
+                            DimensionOverridesConfig.unknownEntityIds(), ChatFormatting.RED);
                     reportList(source, "Exclusions naming unknown entities",
-                            ExcludedMobsConfig.unknownEntityIds(), Formatting.RED);
+                            ExcludedMobsConfig.unknownEntityIds(), ChatFormatting.RED);
 
                     return 1;
                 });
@@ -183,12 +183,12 @@ public final class AdminCommands {
 
     // ------------------------------------------------------------------
 
-    private static int setExcluded(CommandContext<ServerCommandSource> context) {
-        Identifier mob = IdentifierArgumentType.getIdentifier(context, "mob");
+    private static int setExcluded(CommandContext<CommandSourceStack> context) {
+        Identifier mob = IdentifierArgument.getId(context, "mob");
         boolean excluded = BoolArgumentType.getBool(context, "excluded");
 
-        if (Registries.ENTITY_TYPE.getOptionalValue(mob).isEmpty()) {
-            context.getSource().sendError(Text.literal("No such entity: " + mob));
+        if (BuiltInRegistries.ENTITY_TYPE.getOptional(mob).isEmpty()) {
+            context.getSource().sendFailure(Component.literal("No such entity: " + mob));
             return 0;
         }
 
@@ -207,12 +207,12 @@ public final class AdminCommands {
         return 1;
     }
 
-    private static int setDimension(CommandContext<ServerCommandSource> context) {
-        Identifier mob = IdentifierArgumentType.getIdentifier(context, "mob");
-        Identifier dimension = IdentifierArgumentType.getIdentifier(context, "dimension");
+    private static int setDimension(CommandContext<CommandSourceStack> context) {
+        Identifier mob = IdentifierArgument.getId(context, "mob");
+        Identifier dimension = IdentifierArgument.getId(context, "dimension");
 
-        if (Registries.ENTITY_TYPE.getOptionalValue(mob).isEmpty()) {
-            context.getSource().sendError(Text.literal("No such entity: " + mob));
+        if (BuiltInRegistries.ENTITY_TYPE.getOptional(mob).isEmpty()) {
+            context.getSource().sendFailure(Component.literal("No such entity: " + mob));
             return 0;
         }
 
@@ -222,8 +222,8 @@ public final class AdminCommands {
         return 1;
     }
 
-    private static int clearDimension(CommandContext<ServerCommandSource> context) {
-        Identifier mob = IdentifierArgumentType.getIdentifier(context, "mob");
+    private static int clearDimension(CommandContext<CommandSourceStack> context) {
+        Identifier mob = IdentifierArgument.getId(context, "mob");
 
         if (!DimensionOverridesConfig.remove(mob.toString())) {
             feedback(context, "No dimension override was set for " + mob + ".");
@@ -236,13 +236,13 @@ public final class AdminCommands {
     }
 
     /** Prints every setting and its current value, so the file is not the only way to see them. */
-    private static int showConfig(CommandContext<ServerCommandSource> context) {
-        ServerCommandSource source = context.getSource();
+    private static int showConfig(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
         PluginConfig config = ConfigManager.get();
 
-        source.sendMessage(Text.literal("--- NoLife Tracker config ---").formatted(Formatting.GOLD, Formatting.BOLD));
-        source.sendMessage(Text.literal("config/nolifetracker/config.json - /nolifetracker config <setting> <value> to change")
-                .formatted(Formatting.DARK_GRAY));
+        source.sendSystemMessage(Component.literal("--- NoLife Tracker config ---").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+        source.sendSystemMessage(Component.literal("config/nolifetracker/config.json - /nolifetracker config <setting> <value> to change")
+                .withStyle(ChatFormatting.DARK_GRAY));
 
         heading(source, "Tab list");
         setting(source, "tabHeader", config.tabHeader);
@@ -269,11 +269,11 @@ public final class AdminCommands {
         return 1;
     }
 
-    private static LiteralArgumentBuilder<ServerCommandSource> booleanSetting(
+    private static LiteralArgumentBuilder<CommandSourceStack> booleanSetting(
             String name, BiConsumer<PluginConfig, Boolean> setter) {
-        return CommandManager.literal(name)
+        return Commands.literal(name)
                 .executes(context -> describe(context, name))
-                .then(CommandManager.argument("value", BoolArgumentType.bool())
+                .then(Commands.argument("value", BoolArgumentType.bool())
                         .executes(context -> {
                             boolean value = BoolArgumentType.getBool(context, "value");
                             setter.accept(ConfigManager.get(), value);
@@ -281,11 +281,11 @@ public final class AdminCommands {
                         }));
     }
 
-    private static LiteralArgumentBuilder<ServerCommandSource> numberSetting(
+    private static LiteralArgumentBuilder<CommandSourceStack> numberSetting(
             String name, int min, int max, BiConsumer<PluginConfig, Integer> setter) {
-        return CommandManager.literal(name)
+        return Commands.literal(name)
                 .executes(context -> describe(context, name))
-                .then(CommandManager.argument("value", IntegerArgumentType.integer(min, max))
+                .then(Commands.argument("value", IntegerArgumentType.integer(min, max))
                         .executes(context -> {
                             int value = IntegerArgumentType.getInteger(context, "value");
                             setter.accept(ConfigManager.get(), value);
@@ -300,27 +300,27 @@ public final class AdminCommands {
      * one. The {@code clear} literal is declared before the greedy argument so Brigadier
      * prefers it; to set the text to the literal word, prefix it with a colour code.
      */
-    private static LiteralArgumentBuilder<ServerCommandSource> textSetting(
+    private static LiteralArgumentBuilder<CommandSourceStack> textSetting(
             String name, Function<PluginConfig, String> getter, BiConsumer<PluginConfig, String> setter) {
-        return CommandManager.literal(name)
+        return Commands.literal(name)
                 .executes(context -> {
                     String current = getter.apply(ConfigManager.get());
                     if (current.isEmpty()) {
-                        feedback(context, Text.literal(name + " is empty.").formatted(Formatting.GREEN));
+                        feedback(context, Component.literal(name + " is empty.").withStyle(ChatFormatting.GREEN));
                         return 1;
                     }
-                    context.getSource().sendMessage(Text.literal(name + ": ").formatted(Formatting.GRAY)
-                            .append(Text.literal(current).formatted(Formatting.WHITE)));
-                    context.getSource().sendMessage(Text.literal("shows as: ").formatted(Formatting.GRAY)
+                    context.getSource().sendSystemMessage(Component.literal(name + ": ").withStyle(ChatFormatting.GRAY)
+                            .append(Component.literal(current).withStyle(ChatFormatting.WHITE)));
+                    context.getSource().sendSystemMessage(Component.literal("shows as: ").withStyle(ChatFormatting.GRAY)
                             .append(TextUtil.legacy(current)));
                     return 1;
                 })
-                .then(CommandManager.literal("clear")
+                .then(Commands.literal("clear")
                         .executes(context -> {
                             setter.accept(ConfigManager.get(), "");
                             return applied(context, name, "");
                         }))
-                .then(CommandManager.argument("text", StringArgumentType.greedyString())
+                .then(Commands.argument("text", StringArgumentType.greedyString())
                         .executes(context -> {
                             String value = StringArgumentType.getString(context, "text").replace("\\n", "\n");
                             setter.accept(ConfigManager.get(), value);
@@ -329,7 +329,7 @@ public final class AdminCommands {
     }
 
     /** Persists a config change, pushes it to every client, and reports what it looks like. */
-    private static int applied(CommandContext<ServerCommandSource> context, String name, String value) {
+    private static int applied(CommandContext<CommandSourceStack> context, String name, String value) {
         ConfigManager.save();
 
         NoLifeTrackerService service = NoLifeTrackerService.get();
@@ -338,30 +338,30 @@ public final class AdminCommands {
         }
 
         if (value.isEmpty()) {
-            feedback(context, Text.literal(name + " is now empty.").formatted(Formatting.GREEN));
+            feedback(context, Component.literal(name + " is now empty.").withStyle(ChatFormatting.GREEN));
         } else {
-            feedback(context, Text.literal(name + " is now ").formatted(Formatting.GREEN)
+            feedback(context, Component.literal(name + " is now ").withStyle(ChatFormatting.GREEN)
                     .append(TextUtil.legacy(value)));
         }
         return 1;
     }
 
-    private static int describe(CommandContext<ServerCommandSource> context, String name) {
-        context.getSource().sendError(Text.literal("Give " + name + " a value, e.g. /nolifetracker config " + name + " true"));
+    private static int describe(CommandContext<CommandSourceStack> context, String name) {
+        context.getSource().sendFailure(Component.literal("Give " + name + " a value, e.g. /nolifetracker config " + name + " true"));
         return 0;
     }
 
-    private static void heading(ServerCommandSource source, String text) {
-        source.sendMessage(Text.literal(text).formatted(Formatting.YELLOW));
+    private static void heading(CommandSourceStack source, String text) {
+        source.sendSystemMessage(Component.literal(text).withStyle(ChatFormatting.YELLOW));
     }
 
-    private static void setting(ServerCommandSource source, String name, Object value) {
+    private static void setting(CommandSourceStack source, String name, Object value) {
         String rendered = String.valueOf(value);
-        source.sendMessage(Text.literal("  " + name + ": ").formatted(Formatting.GRAY)
-                .append(Text.literal(rendered.isEmpty() ? "(empty)" : rendered).formatted(Formatting.WHITE)));
+        source.sendSystemMessage(Component.literal("  " + name + ": ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(rendered.isEmpty() ? "(empty)" : rendered).withStyle(ChatFormatting.WHITE)));
     }
 
-    private static void applyChallengeChange(CommandContext<ServerCommandSource> context) {
+    private static void applyChallengeChange(CommandContext<CommandSourceStack> context) {
         ChallengeRegistry.refresh();
         ChallengeRegistry.invalidateAll();
 
@@ -371,28 +371,28 @@ public final class AdminCommands {
         }
     }
 
-    private static void reportList(ServerCommandSource source, String heading,
-                                   List<String> values, Formatting colour) {
+    private static void reportList(CommandSourceStack source, String heading,
+                                   List<String> values, ChatFormatting colour) {
         if (values.isEmpty()) {
             return;
         }
-        source.sendMessage(Text.literal(heading + " (" + values.size() + "):").formatted(colour));
-        source.sendMessage(Text.literal("  " + String.join(", ", values)).formatted(Formatting.GRAY));
+        source.sendSystemMessage(Component.literal(heading + " (" + values.size() + "):").withStyle(colour));
+        source.sendSystemMessage(Component.literal("  " + String.join(", ", values)).withStyle(ChatFormatting.GRAY));
     }
 
-    private static void feedback(CommandContext<ServerCommandSource> context, String message) {
-        feedback(context, Text.literal(message).formatted(Formatting.GREEN));
+    private static void feedback(CommandContext<CommandSourceStack> context, String message) {
+        feedback(context, Component.literal(message).withStyle(ChatFormatting.GREEN));
     }
 
     /** Broadcast to other admins, which is why the message is built before the supplier is called. */
-    private static void feedback(CommandContext<ServerCommandSource> context, Text message) {
-        context.getSource().sendFeedback(() -> message, true);
+    private static void feedback(CommandContext<CommandSourceStack> context, Component message) {
+        context.getSource().sendSuccess(() -> message, true);
     }
 
     /** Cached: this used to walk the whole registry on every keystroke of a tab-completion. */
     private static List<String> entityIds() {
         if (cachedEntityIds == null) {
-            cachedEntityIds = Registries.ENTITY_TYPE.getIds().stream()
+            cachedEntityIds = BuiltInRegistries.ENTITY_TYPE.keySet().stream()
                     .map(Identifier::toString)
                     .sorted()
                     .toList();

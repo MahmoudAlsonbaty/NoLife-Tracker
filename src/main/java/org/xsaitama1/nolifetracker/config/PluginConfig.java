@@ -169,7 +169,7 @@ public class PluginConfig {
     public int autoSaveMinutes = 5;
 
     /**
-     * Mobs to count even though vanilla files them under {@code SpawnGroup.MISC}.
+     * Mobs to count even though vanilla files them under {@code MobCategory.MISC}.
      * Defaults cover the golems, bosses and summon-only mobs; add to it if a future
      * update introduces a mob that {@code /nolifetracker audit} reports as unclassified.
      */

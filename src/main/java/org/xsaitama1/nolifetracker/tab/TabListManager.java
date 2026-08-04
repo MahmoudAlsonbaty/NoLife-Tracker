@@ -1,9 +1,9 @@
 package org.xsaitama1.nolifetracker.tab;
 
-import net.minecraft.network.packet.s2c.play.PlayerListHeaderS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
+import net.minecraft.network.protocol.game.ClientboundTabListPacket;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
 import org.xsaitama1.nolifetracker.challenge.ChallengeRegistry;
 import org.xsaitama1.nolifetracker.config.ConfigManager;
 import org.xsaitama1.nolifetracker.config.PluginConfig;
@@ -58,18 +58,18 @@ public final class TabListManager {
 
     /** Sends immediately, bypassing the rate limit. Used on join and after an admin change. */
     public void broadcast() {
-        List<ServerPlayerEntity> players = server.getPlayerManager().getPlayerList();
+        List<ServerPlayer> players = server.getPlayerList().getPlayers();
         if (players.isEmpty()) {
             return;
         }
 
-        server.getPlayerManager().sendToAll(new PlayerListS2CPacket(
-                EnumSet.of(PlayerListS2CPacket.Action.UPDATE_DISPLAY_NAME), players));
+        server.getPlayerList().broadcastAll(new ClientboundPlayerInfoUpdatePacket(
+                EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME), players));
 
         sendHeader(players);
     }
 
-    private void sendHeader(List<ServerPlayerEntity> players) {
+    private void sendHeader(List<ServerPlayer> players) {
         PluginConfig config = ConfigManager.get();
 
         // Null on a fresh server, where nobody has killed anything yet. The old code called
@@ -85,12 +85,12 @@ public final class TabListManager {
         // displaying the last header it was handed until another one arrives, so turning
         // showTopPlayerInTabList off has to actively clear the banner -- simply declining to
         // send, which is what this used to do, left the old text on screen indefinitely.
-        PlayerListHeaderS2CPacket packet = new PlayerListHeaderS2CPacket(
+        ClientboundTabListPacket packet = new ClientboundTabListPacket(
                 TextUtil.legacy(render(header, leader, players.size())),
                 TextUtil.legacy(render(config.tabFooter, leader, players.size())));
 
-        for (ServerPlayerEntity player : players) {
-            player.networkHandler.sendPacket(packet);
+        for (ServerPlayer player : players) {
+            player.connection.send(packet);
         }
     }
 
@@ -106,7 +106,7 @@ public final class TabListManager {
                         leader == null ? 0 : ChallengeRegistry.uniqueKills(leader.getKey(), leader.getValue())))
                 .replace("%total%", String.valueOf(ChallengeRegistry.total()))
                 .replace("%online%", String.valueOf(online))
-                .replace("%max%", String.valueOf(server.getPlayerManager().getMaxPlayerCount()));
+                .replace("%max%", String.valueOf(server.getPlayerList().getMaxPlayers()));
     }
 
     /**

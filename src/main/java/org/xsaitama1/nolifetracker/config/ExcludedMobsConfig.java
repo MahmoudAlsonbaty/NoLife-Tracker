@@ -1,8 +1,8 @@
 package org.xsaitama1.nolifetracker.config;
 
 import com.google.gson.reflect.TypeToken;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,7 +91,7 @@ public final class ExcludedMobsConfig {
         List<String> unknown = new ArrayList<>();
         for (String id : excluded) {
             Identifier parsed = Identifier.tryParse(id);
-            if (parsed == null || Registries.ENTITY_TYPE.getOptionalValue(parsed).isEmpty()) {
+            if (parsed == null || BuiltInRegistries.ENTITY_TYPE.getOptional(parsed).isEmpty()) {
                 unknown.add(id);
             }
         }

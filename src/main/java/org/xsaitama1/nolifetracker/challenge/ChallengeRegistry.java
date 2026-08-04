@@ -1,9 +1,9 @@
 package org.xsaitama1.nolifetracker.challenge;
 
-import net.minecraft.entity.EntityType;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.Identifier;
+import net.minecraft.world.entity.EntityType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xsaitama1.nolifetracker.config.ConfigManager;
@@ -71,8 +71,8 @@ public final class ChallengeRegistry {
 
         Set<String> forceInclude = Set.copyOf(ConfigManager.get().forceIncludeMobs);
 
-        for (EntityType<?> type : Registries.ENTITY_TYPE) {
-            Identifier id = Registries.ENTITY_TYPE.getId(type);
+        for (EntityType<?> type : BuiltInRegistries.ENTITY_TYPE) {
+            Identifier id = BuiltInRegistries.ENTITY_TYPE.getKey(type);
             if (id == null) {
                 continue;
             }

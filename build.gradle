@@ -1,5 +1,5 @@
 plugins {
-    id 'fabric-loom' version '1.15-SNAPSHOT'
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
     id 'maven-publish'
 }
 
@@ -29,11 +29,14 @@ repositories {
 
 dependencies {
     // To change the versions see the gradle.properties file
+    //
+    // No `mappings` line: from 26.1 onward Minecraft ships with official names, so Loom no
+    // longer remaps the game and Yarn is frozen at 1.21.11. For the same reason these are
+    // plain `implementation` rather than `modImplementation`.
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 }
 
 processResources {
@@ -49,7 +52,7 @@ processResources {
     }
 }
 
-def targetJavaVersion = 21
+def targetJavaVersion = 25
 tasks.withType(JavaCompile).configureEach {
     // ensure that the encoding is set to UTF-8, no matter what the system default is
     // this fixes some edge cases with special characters not displaying correctly
@@ -66,8 +69,7 @@ java {
     if (JavaVersion.current() < javaVersion) {
         toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
     }
-    // Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-    // if it is present.
+    // Attaches sourcesJar to the "build" task.
     // If you remove this line, sources will not be generated.
     withSourcesJar()
 }
@@ -112,7 +114,10 @@ tasks.register('deployMod', Copy) {
     // Take the one jar this build actually produced, rather than globbing build/libs --
     // that directory keeps jars from earlier versions, and copying two of them would
     // leave the server with a duplicate mod id and refuse to start.
-    from tasks.named('remapJar')
+    //
+    // `jar`, not `remapJar`: Minecraft ships with official names from 26.1 on, so Loom no
+    // longer registers a remapping step and `jar` is the finished mod.
+    from tasks.named('jar')
 
     def target = providers.gradleProperty('deploy_dir')
     onlyIf {

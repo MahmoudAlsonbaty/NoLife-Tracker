@@ -1,8 +1,8 @@
 package org.xsaitama1.nolifetracker.util;
 
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 
 import java.util.LinkedHashSet;
 import java.util.Locale;
@@ -11,8 +11,16 @@ import java.util.Set;
 /** Small formatting helpers shared by the commands, the tab list and the kill announcements. */
 public final class TextUtil {
 
-    /** Colour and style codes accepted after {@code &} in configurable text. */
-    private static final String LEGACY_CODES = "0123456789abcdefklmnor";
+    /**
+     * Colour and style codes accepted after {@code &} in configurable text.
+     *
+     * <p>Split by kind because {@code ChatFormatting} no longer exposes {@code isColor()} --
+     * 26.2 trimmed the enum down to the code character and nothing else -- so which codes
+     * reset the active styles has to be stated here rather than asked of the enum.
+     */
+    private static final String LEGACY_COLOUR_CODES = "0123456789abcdef";
+    private static final String LEGACY_STYLE_CODES = "klmno";
+    private static final String LEGACY_CODES = LEGACY_COLOUR_CODES + LEGACY_STYLE_CODES + "r";
 
     private TextUtil() {
     }
@@ -61,15 +69,15 @@ public final class TextUtil {
      * <p>Following vanilla's legacy behaviour, a colour code clears any active styles
      * and {@code &r} resets everything. Unknown codes are left as literal text.
      */
-    public static MutableText legacy(String input) {
-        MutableText root = Text.empty();
+    public static MutableComponent legacy(String input) {
+        MutableComponent root = Component.empty();
         if (input == null || input.isEmpty()) {
             return root;
         }
 
         StringBuilder buffer = new StringBuilder();
-        Set<Formatting> styles = new LinkedHashSet<>();
-        Formatting colour = null;
+        Set<ChatFormatting> styles = new LinkedHashSet<>();
+        ChatFormatting colour = null;
 
         for (int i = 0; i < input.length(); i++) {
             char c = input.charAt(i);
@@ -84,14 +92,15 @@ public final class TextUtil {
 
             flush(root, buffer, colour, styles);
 
-            Formatting format = Formatting.byCode(Character.toLowerCase(input.charAt(++i)));
+            char code = Character.toLowerCase(input.charAt(++i));
+            ChatFormatting format = ChatFormatting.getByCode(code);
             if (format == null) {
                 continue;
             }
-            if (format == Formatting.RESET) {
+            if (format == ChatFormatting.RESET) {
                 colour = null;
                 styles.clear();
-            } else if (format.isColor()) {
+            } else if (LEGACY_COLOUR_CODES.indexOf(code) >= 0) {
                 colour = format;
                 styles.clear();
             } else {
@@ -103,17 +112,18 @@ public final class TextUtil {
         return root;
     }
 
-    private static void flush(MutableText root, StringBuilder buffer, Formatting colour, Set<Formatting> styles) {
+    private static void flush(MutableComponent root, StringBuilder buffer,
+                              ChatFormatting colour, Set<ChatFormatting> styles) {
         if (buffer.isEmpty()) {
             return;
         }
 
-        MutableText part = Text.literal(buffer.toString());
+        MutableComponent part = Component.literal(buffer.toString());
         if (colour != null) {
-            part.formatted(colour);
+            part.withStyle(colour);
         }
-        for (Formatting style : styles) {
-            part.formatted(style);
+        for (ChatFormatting style : styles) {
+            part.withStyle(style);
         }
 
         root.append(part);

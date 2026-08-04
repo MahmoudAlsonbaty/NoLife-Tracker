@@ -1,9 +1,9 @@
 package org.xsaitama1.nolifetracker.challenge;
 
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.SpawnGroup;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MobCategory;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -11,9 +11,9 @@ import java.util.Set;
 /**
  * Decides which entity types count as "a mob" for the challenge.
  *
- * <p>The primary signal is {@link SpawnGroup}. Vanilla files every entity that does not
+ * <p>The primary signal is {@link MobCategory}. Vanilla files every entity that does not
  * support natural spawning -- arrows, boats, minecarts, item frames, TNT, displays,
- * experience orbs -- under {@link SpawnGroup#MISC}, and everything else under one of the
+ * experience orbs -- under {@link MobCategory#MISC}, and everything else under one of the
  * living categories. That is a stable registry property, so mobs added by a game update
  * or by another mod are picked up automatically with no list to maintain.
  *
@@ -44,7 +44,7 @@ public final class MobClassifier {
             "minecraft:zombie_horse",
             "minecraft:skeleton_horse",
             // Villagers only spawn as part of a village, so vanilla files them under MISC
-            // alongside the boats. Confirmed against the 1.21.11 registry, not assumed.
+            // alongside the boats. Confirmed against the 26.2 registry, not assumed.
             "minecraft:villager"
     );
 
@@ -57,7 +57,7 @@ public final class MobClassifier {
     );
 
     /**
-     * Every remaining MISC entity in 1.21.11 that is not a mob: projectiles, dropped items,
+     * Every remaining MISC entity in 26.2 that is not a mob: projectiles, dropped items,
      * displays and decorations.
      *
      * <p>The point of naming them all is that anything MISC and <em>not</em> listed here gets
@@ -120,7 +120,7 @@ public final class MobClassifier {
         if (forceInclude.contains(id)) {
             return true;
         }
-        return type.getSpawnGroup() != SpawnGroup.MISC;
+        return type.getCategory() != MobCategory.MISC;
     }
 
     private static boolean isKnownNonMob(String id) {
@@ -142,8 +142,8 @@ public final class MobClassifier {
      */
     public static Set<String> unclassifiedCandidates(Set<String> forceInclude) {
         Set<String> candidates = new LinkedHashSet<>();
-        for (EntityType<?> type : Registries.ENTITY_TYPE) {
-            if (type.getSpawnGroup() != SpawnGroup.MISC) {
+        for (EntityType<?> type : BuiltInRegistries.ENTITY_TYPE) {
+            if (type.getCategory() != MobCategory.MISC) {
                 continue;
             }
             String id = idOf(type);
@@ -156,7 +156,7 @@ public final class MobClassifier {
     }
 
     private static String idOf(EntityType<?> type) {
-        Identifier id = Registries.ENTITY_TYPE.getId(type);
+        Identifier id = BuiltInRegistries.ENTITY_TYPE.getKey(type);
         return id == null ? null : id.toString();
     }
 }

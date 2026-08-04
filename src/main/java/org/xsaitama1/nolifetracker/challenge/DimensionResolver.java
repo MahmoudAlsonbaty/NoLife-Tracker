@@ -1,13 +1,13 @@
 package org.xsaitama1.nolifetracker.challenge;
 
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.SpawnGroup;
-import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.core.Holder;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Identifier;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.SpawnSettings;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.MobSpawnSettings;
 import org.xsaitama1.nolifetracker.config.DimensionOverridesConfig;
 
 import java.util.Comparator;
@@ -26,9 +26,9 @@ import java.util.Set;
  */
 public final class DimensionResolver {
 
-    public static final Identifier OVERWORLD = Identifier.of("minecraft", "overworld");
-    public static final Identifier NETHER = Identifier.of("minecraft", "the_nether");
-    public static final Identifier END = Identifier.of("minecraft", "the_end");
+    public static final Identifier OVERWORLD = Identifier.fromNamespaceAndPath("minecraft", "overworld");
+    public static final Identifier NETHER = Identifier.fromNamespaceAndPath("minecraft", "the_nether");
+    public static final Identifier END = Identifier.fromNamespaceAndPath("minecraft", "the_end");
 
     private static final Map<EntityType<?>, Set<Identifier>> NATIVE_DIMENSIONS = new HashMap<>();
 
@@ -39,19 +39,19 @@ public final class DimensionResolver {
     public static void scan(MinecraftServer server) {
         NATIVE_DIMENSIONS.clear();
 
-        for (ServerWorld world : server.getWorlds()) {
-            Identifier dimensionId = world.getRegistryKey().getValue();
+        for (ServerLevel level : server.getAllLevels()) {
+            Identifier dimensionId = level.dimension().identifier();
 
-            Set<RegistryEntry<Biome>> biomes = world.getChunkManager()
-                    .getChunkGenerator()
+            Set<Holder<Biome>> biomes = level.getChunkSource()
+                    .getGenerator()
                     .getBiomeSource()
-                    .getBiomes();
+                    .possibleBiomes();
 
-            for (RegistryEntry<Biome> biomeEntry : biomes) {
-                SpawnSettings spawnSettings = biomeEntry.value().getSpawnSettings();
+            for (Holder<Biome> biomeEntry : biomes) {
+                MobSpawnSettings spawnSettings = biomeEntry.value().getMobSettings();
 
-                for (SpawnGroup group : SpawnGroup.values()) {
-                    spawnSettings.getSpawnEntries(group).getEntries().forEach(weighted ->
+                for (MobCategory category : MobCategory.values()) {
+                    spawnSettings.getMobs(category).unwrap().forEach(weighted ->
                             NATIVE_DIMENSIONS
                                     .computeIfAbsent(weighted.value().type(), key -> new HashSet<>())
                                     .add(dimensionId));

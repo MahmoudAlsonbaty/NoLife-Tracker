@@ -1,10 +1,11 @@
 package org.xsaitama1.nolifetracker.mixin;
 
-import net.minecraft.scoreboard.Team;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.TextColor;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.scores.PlayerTeam;
+import net.minecraft.world.scores.TeamColor;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -28,29 +29,30 @@ import org.xsaitama1.nolifetracker.util.TextUtil;
  * <p>Priority stays high so this runs after cosmetic name-changing mods and can wrap
  * whatever they produced.
  */
-@Mixin(value = ServerPlayerEntity.class, priority = 2000)
+@Mixin(value = ServerPlayer.class, priority = 2000)
 public class TabListMixin {
 
-    @Inject(method = "getPlayerListName", at = @At("RETURN"), cancellable = true)
-    private void nolifetracker$appendProgress(CallbackInfoReturnable<Text> cir) {
+    @Inject(method = "getTabListDisplayName", at = @At("RETURN"), cancellable = true)
+    private void nolifetracker$appendProgress(CallbackInfoReturnable<Component> cir) {
         NoLifeTrackerService service = NoLifeTrackerService.get();
         if (service == null) {
             return;
         }
 
-        ServerPlayerEntity player = (ServerPlayerEntity) (Object) this;
-        PlayerStats stats = service.stats().get(player.getUuid());
+        ServerPlayer player = (ServerPlayer) (Object) this;
+        PlayerStats stats = service.stats().get(player.getUUID());
         PluginConfig config = ConfigManager.get();
 
-        Text originalName = cir.getReturnValue();
+        Component originalName = cir.getReturnValue();
         if (originalName == null) {
             originalName = player.getName();
         }
 
-        MutableText name = Text.empty()
-                .append(Text.empty().append(originalName).formatted(nolifetracker$teamColour(player)));
+        TextColor colour = nolifetracker$teamColour(player);
+        MutableComponent name = Component.empty()
+                .append(Component.empty().append(originalName).withStyle(style -> style.withColor(colour)));
 
-        if (!config.afkSuffix.isEmpty() && service.afk().isAfk(player.getUuid())) {
+        if (!config.afkSuffix.isEmpty() && service.afk().isAfk(player.getUUID())) {
             name.append(TextUtil.legacy(config.afkSuffix));
         }
 
@@ -66,9 +68,9 @@ public class TabListMixin {
      * lookup, so this stays within the budget a per-packet-entry call has.
      */
     @Unique
-    private static String nolifetracker$render(String template, ServerPlayerEntity player, PlayerStats stats) {
+    private static String nolifetracker$render(String template, ServerPlayer player, PlayerStats stats) {
         return template
-                .replace("%kills%", String.valueOf(ChallengeRegistry.uniqueKills(player.getUuid(), stats)))
+                .replace("%kills%", String.valueOf(ChallengeRegistry.uniqueKills(player.getUUID(), stats)))
                 .replace("%total%", String.valueOf(ChallengeRegistry.total()))
                 .replace("%deaths%", String.valueOf(stats.totalDeaths))
                 .replace("%pvpkills%", String.valueOf(stats.totalPlayerKills))
@@ -77,14 +79,17 @@ public class TabListMixin {
 
     /**
      * Unique, and private: a plain public helper in a mixin class is merged into
-     * ServerPlayerEntity itself, where it can collide with another mod's mixin.
+     * ServerPlayer itself, where it can collide with another mod's mixin.
+     *
+     * <p>A team's colour is an optional {@link TeamColor} rather than a {@code ChatFormatting}
+     * as of 26.2, so this hands back the {@link TextColor} to apply to the style directly.
      */
     @Unique
-    private static Formatting nolifetracker$teamColour(ServerPlayerEntity player) {
-        Team team = (Team) player.getScoreboardTeam();
-        if (team != null && team.getColor() != null) {
-            return team.getColor();
+    private static TextColor nolifetracker$teamColour(ServerPlayer player) {
+        PlayerTeam team = player.getTeam();
+        if (team == null) {
+            return TextColor.WHITE;
         }
-        return Formatting.WHITE;
+        return team.getColor().map(TeamColor::textColor).orElse(TextColor.WHITE);
     }
 }

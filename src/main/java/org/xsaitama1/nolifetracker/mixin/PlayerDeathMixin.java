@@ -1,8 +1,8 @@
 package org.xsaitama1.nolifetracker.mixin;
 
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -12,7 +12,7 @@ import org.xsaitama1.nolifetracker.NoLifeTrackerService;
 import org.xsaitama1.nolifetracker.data.PlayerStats;
 
 /** Records how a player died, grouped by vanilla's own death message. */
-@Mixin(ServerPlayerEntity.class)
+@Mixin(ServerPlayer.class)
 public class PlayerDeathMixin {
 
     /**
@@ -23,15 +23,15 @@ public class PlayerDeathMixin {
     @Unique
     private static final int NOLIFETRACKER$MAX_REASONS = 200;
 
-    @Inject(method = "onDeath", at = @At("HEAD"))
+    @Inject(method = "die", at = @At("HEAD"))
     private void nolifetracker$recordDeath(DamageSource damageSource, CallbackInfo ci) {
         NoLifeTrackerService service = NoLifeTrackerService.get();
         if (service == null) {
             return;
         }
 
-        ServerPlayerEntity player = (ServerPlayerEntity) (Object) this;
-        PlayerStats stats = service.stats().get(player.getUuid());
+        ServerPlayer player = (ServerPlayer) (Object) this;
+        PlayerStats stats = service.stats().get(player.getUUID());
 
         stats.totalDeaths++;
         stats.lastKnownName = player.getName().getString();
@@ -54,10 +54,10 @@ public class PlayerDeathMixin {
      * differ from the plain name, so both are tried.
      */
     @Unique
-    private static String nolifetracker$deathReason(ServerPlayerEntity player) {
-        String message = player.getDamageTracker().getDeathMessage().getString();
+    private static String nolifetracker$deathReason(ServerPlayer player) {
+        String message = player.getCombatTracker().getDeathMessage().getString();
 
-        Text displayName = player.getDisplayName();
+        Component displayName = player.getDisplayName();
         String[] prefixes = {
                 displayName == null ? null : displayName.getString(),
                 player.getName().getString()

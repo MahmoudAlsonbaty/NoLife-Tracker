@@ -3,7 +3,7 @@ package org.xsaitama1.nolifetracker.listener;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
 import org.xsaitama1.nolifetracker.NoLifeTrackerService;
 import org.xsaitama1.nolifetracker.challenge.ChallengeRegistry;
 import org.xsaitama1.nolifetracker.data.PlayerStats;
@@ -37,11 +37,11 @@ public final class LifecycleListener {
                 return;
             }
 
-            ServerPlayerEntity player = handler.getPlayer();
-            PlayerStats stats = service.stats().get(player.getUuid());
+            ServerPlayer player = handler.getPlayer();
+            PlayerStats stats = service.stats().get(player.getUUID());
             stats.lastKnownName = player.getName().getString();
 
-            ChallengeRegistry.invalidate(player.getUuid());
+            ChallengeRegistry.invalidate(player.getUUID());
             service.runIn(JOIN_HEADER_DELAY_TICKS, service.tabList()::broadcast);
         });
 
@@ -51,7 +51,7 @@ public final class LifecycleListener {
                 return;
             }
 
-            UUID uuid = handler.getPlayer().getUuid();
+            UUID uuid = handler.getPlayer().getUUID();
             service.afk().forget(uuid);
             service.stats().saveAsync();
             service.tabList().markDirty();

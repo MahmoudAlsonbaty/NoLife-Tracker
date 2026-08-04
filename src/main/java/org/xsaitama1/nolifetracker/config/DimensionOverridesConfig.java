@@ -2,9 +2,9 @@ package org.xsaitama1.nolifetracker.config;
 
 import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
-import net.minecraft.entity.EntityType;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.EntityType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,9 +104,9 @@ public final class DimensionOverridesConfig {
                 continue;
             }
 
-            // getOptionalValue, not get: ENTITY_TYPE is a DefaultedRegistry, so a typo would
+            // getOptional, not get: ENTITY_TYPE is a DefaultedRegistry, so a typo would
             // otherwise silently resolve to minecraft:pig and rewrite the pig's dimension.
-            Optional<EntityType<?>> type = Registries.ENTITY_TYPE.getOptionalValue(entityId);
+            Optional<EntityType<?>> type = BuiltInRegistries.ENTITY_TYPE.getOptional(entityId);
             if (type.isEmpty()) {
                 UNKNOWN_ENTITY_IDS.add(entry.getKey());
                 continue;

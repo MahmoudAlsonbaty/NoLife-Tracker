@@ -1,10 +1,10 @@
 package org.xsaitama1.nolifetracker.tab;
 
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.phys.Vec3;
 import org.xsaitama1.nolifetracker.config.ConfigManager;
 
 import java.util.HashMap;
@@ -26,7 +26,7 @@ public final class AfkTracker {
 
     private final Set<UUID> afk = new HashSet<>();
     private final Set<UUID> manual = new HashSet<>();
-    private final Map<UUID, Vec3d> lastPositions = new HashMap<>();
+    private final Map<UUID, Vec3> lastPositions = new HashMap<>();
     private final Map<UUID, Long> lastMovedAt = new HashMap<>();
 
     private final Runnable onStateChanged;
@@ -81,24 +81,24 @@ public final class AfkTracker {
         long thresholdMillis = ConfigManager.get().afkThresholdSeconds * 1000L;
         boolean changed = false;
 
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-            UUID uuid = player.getUuid();
-            Vec3d position = new Vec3d(player.getX(), player.getY(), player.getZ());
-            Vec3d previous = lastPositions.put(uuid, position);
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            UUID uuid = player.getUUID();
+            Vec3 position = new Vec3(player.getX(), player.getY(), player.getZ());
+            Vec3 previous = lastPositions.put(uuid, position);
 
             if (previous == null) {
                 lastMovedAt.put(uuid, now);
                 continue;
             }
 
-            if (previous.squaredDistanceTo(position) > 0.0001) {
+            if (previous.distanceToSqr(position) > 0.0001) {
                 lastMovedAt.put(uuid, now);
 
                 // Movement clears automatic AFK, but not a state the player set themselves.
                 if (afk.contains(uuid) && !manual.contains(uuid)) {
                     afk.remove(uuid);
-                    player.sendMessage(Text.literal("You are no longer AFK.")
-                            .formatted(Formatting.GRAY), false);
+                    player.sendSystemMessage(Component.literal("You are no longer AFK.")
+                            .withStyle(ChatFormatting.GRAY));
                     changed = true;
                 }
                 continue;
@@ -107,8 +107,8 @@ public final class AfkTracker {
             long idleSince = lastMovedAt.getOrDefault(uuid, now);
             if (now - idleSince >= thresholdMillis && !afk.contains(uuid)) {
                 afk.add(uuid);
-                player.sendMessage(Text.literal("You are now AFK.")
-                        .formatted(Formatting.GRAY), false);
+                player.sendSystemMessage(Component.literal("You are now AFK.")
+                        .withStyle(ChatFormatting.GRAY));
                 changed = true;
             }
         }

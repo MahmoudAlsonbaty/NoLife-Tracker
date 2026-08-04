@@ -8,12 +8,12 @@ A server-side Fabric challenge tracker to fix the minecraft 2 week burnout. It w
 
 <br>
 
-![Minecraft](https://img.shields.io/badge/Minecraft-1.21.11-54B435?style=for-the-badge)
+![Minecraft](https://img.shields.io/badge/Minecraft-26.2-54B435?style=for-the-badge)
 ![Loader](https://img.shields.io/badge/Loader-Fabric-DBB18B?style=for-the-badge)
 ![Side](https://img.shields.io/badge/Side-Server%20only-4A6FE3?style=for-the-badge)
 
 ![Fabric API](https://img.shields.io/badge/Fabric%20API-Required-C44536?style=for-the-badge)
-![Java](https://img.shields.io/badge/Java-21%2B-E76F00?style=for-the-badge)
+![Java](https://img.shields.io/badge/Java-25%2B-E76F00?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-3DA639?style=for-the-badge)
 
 <br>
@@ -35,7 +35,7 @@ A server-side Fabric challenge tracker to fix the minecraft 2 week burnout. It w
 ![The Image shows the tab menu with the player info and mobs killed](https://cdn.modrinth.com/data/cached_images/f48f8309e476fde73ac79eaee1f04db888489d61_0.webp)
 ## The challenge
 
-Every entity that can be killed counts exactly once toward your total. On **1.21.11 that's 86 mobs**
+Every entity that can be killed counts exactly once toward your total. On **26.2 that's 87 mobs**
 with the default settings.
 
 Three mobs are excluded out of the box, because most servers don't want them blocking a completion:
@@ -89,7 +89,7 @@ Change any of that in-game. nothing here is fixed.
 
 ## Installation
 
-1. Install **Fabric Loader 0.18.4+** on your server.
+1. Install **Fabric Loader 0.19.3+** on your server (Minecraft 26.2, Java 25+).
 2. Drop **NoLife Tracker** and **Fabric API** into the server's `mods/` folder.
 3. Start the server.
 

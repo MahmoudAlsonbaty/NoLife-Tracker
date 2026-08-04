@@ -2,7 +2,7 @@ package org.xsaitama1.nolifetracker.config;
 
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.WorldSavePath;
+import net.minecraft.world.level.storage.LevelResource;
 
 import java.nio.file.Path;
 
@@ -40,7 +40,7 @@ public final class NoLifeTrackerPaths {
     }
 
     public static Path playerStats(MinecraftServer server) {
-        return server.getSavePath(WorldSavePath.ROOT).resolve("nolifetracker").resolve("player_stats.json");
+        return server.getWorldPath(LevelResource.ROOT).resolve("nolifetracker").resolve("player_stats.json");
     }
 
     /**
@@ -89,7 +89,7 @@ public final class NoLifeTrackerPaths {
      * under the mod's old name. Pull either into the current location if it is there.
      */
     public static void migrateLegacyStats(MinecraftServer server) {
-        Path serverStatsStats = server.getSavePath(WorldSavePath.ROOT)
+        Path serverStatsStats = server.getWorldPath(LevelResource.ROOT)
                 .resolve("serverstats").resolve("player_stats.json");
 
         JsonConfigs.migrateIfPresent(
