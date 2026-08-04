@@ -124,7 +124,7 @@ public class PluginConfig {
     public String tabFooter = "";
 
     /** Appended to every player's tab list entry. Empty leaves names unadorned. */
-    public String tabNameSuffix = " &6[%kills%/%total%] &7| &7☠ %deaths% &7| &c⚔ %pvpkills% &7| &a\\uD83D\\uDDE1 %mobkills%";
+    public String tabNameSuffix = " &6[%kills%/%total%] &7| &7☠ %deaths% &7| &c⚔ %pvpkills% &7| &a\uD83D\uDDE1 %mobkills%";
 
     /** Appended before {@link #tabNameSuffix} for a player who is AFK. */
     public String afkSuffix = " &7&o[AFK]";
