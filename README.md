@@ -4,9 +4,7 @@
 
 ### Kill one of every mob in the game.
 
-A server-side Fabric challenge tracker. It watches every kill, keeps a per-player checklist of
-what's left, and puts the race straight into the tab list — no client mod, no resource pack, no
-scoreboard hacks.
+A server-side Fabric challenge tracker to fix the minecraft 2 week burnout. It watches every kill, keeps a per-player checklist of what's left, and puts the race straight into the tab list, no client mod, no resource pack, no scoreboard hacks.
 
 <br>
 
@@ -28,42 +26,23 @@ scoreboard hacks.
 
 ---
 
-## Compatibility
-
-<div align="center">
-
-| | Supported | Notes |
-| :-- | :-- | :-- |
-| **Minecraft** | `1.21.11` | Built and runtime-tested against this exact version |
-| **Mod loader** | Fabric | Quilt untested |
-| **Fabric Loader** | `0.18.4` or newer | |
-| **Fabric API** | Required | Install it alongside this mod |
-| **Java** | 21 or newer | |
-| **Environment** | Dedicated server, LAN host, single-player | |
-
-</div>
-
 > **Players do not need to install anything.** The mod is entirely server-side, everything it
 > shows is delivered through the vanilla tab list and vanilla chat. Anyone on a matching
 > Minecraft version can join with a stock client.
 
 
 ---
-
+![The Image shows the tab menu with the player info and mobs killed](https://cdn.modrinth.com/data/cached_images/f48f8309e476fde73ac79eaee1f04db888489d61_0.webp)
 ## The challenge
 
 Every entity that can be killed counts exactly once toward your total. On **1.21.11 that's 86 mobs**
 with the default settings.
 
-The list isn't hardcoded. It's derived from the live entity registry at every server start using
-Minecraft's own `SpawnGroup` classification, which means **mobs added by a Minecraft update — or by
-another mod on your server — are picked up automatically**, with no update to this mod required.
-
 Three mobs are excluded out of the box, because most servers don't want them blocking a completion:
 
 `Ender Dragon` · `Giant` · `Illusioner`
 
-Change any of that in-game — nothing here is fixed.
+Change any of that in-game. nothing here is fixed.
 
 ---
 
@@ -72,7 +51,7 @@ Change any of that in-game — nothing here is fixed.
 ### Progress tracking
 
 - Unique-mob progress per player, counted once per mob type
-- Total mob kills, PvP kills, and deaths — with a breakdown of *how* each player died
+- Total mob kills, PvP kills, and deaths with a breakdown of *how* each player died
 - Play time
 
 ### Tab list integration
@@ -85,7 +64,7 @@ Change any of that in-game — nothing here is fixed.
 ### Dimension checklists
 
 - `missing` splits what's left into **Overworld / Nether / End / Other**
-- Done mobs are greyed out, excluded mobs are struck through — you can see the whole set at once
+- Done mobs are greyed out, excluded mobs are struck through, you can see the whole set at once
 - Any mob can be moved between groups if your server's progression differs
 
 ### Leaderboards & announcements
@@ -137,13 +116,13 @@ Everything is under **`/nolifetracker`**. Run it with no arguments for the in-ga
 | `/nolifetracker leaderboard` | Closest to finishing |
 | `/nolifetracker leaderboard deaths` | Ranked by deaths |
 
-### Moderators — permission level 2
+### Moderators (permission level 2)
 
 | Command | What it does |
 | :-- | :-- |
 | `/nolifetracker audit` | Report anything that could make the mob list wrong |
 
-### Admins — permission level 3
+### Admins (permission level 3)
 
 | Command | What it does |
 | :-- | :-- |
@@ -160,7 +139,7 @@ Everything is under **`/nolifetracker`**. Run it with no arguments for the in-ga
 ## Configuration
 
 Everything lives in **`config/nolifetracker/config.json`**, and every setting is also reachable
-through `/nolifetracker config` — changes made in-game are written back to the file immediately, so
+through `/nolifetracker config` changes made in-game are written back to the file immediately, so
 the two can never drift apart.
 
 <details>
@@ -172,7 +151,7 @@ the two can never drift apart.
 
 | Setting | Default | Meaning |
 | :-- | :-- | :-- |
-| `tabHeader` | `&a&l! Minecraft SMP !` | Text above the tab list — your server name line |
+| `tabHeader` | `&a&l! Minecraft SMP !` | Text above the tab list, your server name line |
 | `showTopPlayerInTabList` | `true` | Add the leader banner underneath the header |
 | `topPlayerLine` | `&6&l#1 &e%player% …` | The `#1 <player>` banner. Hidden while nobody has killed anything |
 | `tabFooter` | *(empty)* | Text below the tab list. Empty hides it |
@@ -226,7 +205,7 @@ the server.
 | `%online%` | Players currently online |
 | `%max%` | Player slots on the server |
 
-**In `tabNameSuffix`** — rendered per player, beside their own name
+**In `tabNameSuffix`** rendered per player, beside their own name
 
 | Placeholder | Value |
 | :-- | :-- |
@@ -294,7 +273,7 @@ Because "did I miss a mob?" is nearly impossible to answer by eye, there are two
 
 ## Data and upgrading
 
-Progress is stored in `<world>/nolifetracker/player_stats.json` — **inside the world save**, not the
+Progress is stored in `<world>/nolifetracker/player_stats.json` **inside the world save**, not the
 server directory. Each world keeps its own challenge, and a world backup carries the stats with it.
 
 
